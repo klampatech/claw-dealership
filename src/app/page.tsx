@@ -5,7 +5,7 @@ import Header from '@/components/Header';
 import FilterSidebar from '@/components/FilterSidebar';
 import AlternativeCard from '@/components/AlternativeCard';
 import { FilterState, Alternative } from '@/types';
-import { Search } from 'lucide-react';
+import { Search, ArrowUpDown, Frown } from 'lucide-react';
 
 const defaultFilters: FilterState = {
   search: '',
@@ -76,31 +76,35 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-bg-primary">
       <Header />
 
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-7xl px-4 pt-24 pb-12 sm:px-6 lg:px-8">
         {/* Hero Section */}
-        <div className="mb-10 text-center">
-          <h1 className="mb-4 text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
-            OpenClaw Alternatives
+        <div className="mb-12 text-center animate-fade-in">
+          <h1 className="mb-4 text-4xl sm:text-5xl font-bold tracking-tight">
+            <span className="text-text-primary">OpenClaw </span>
+            <span className="gradient-text">Alternatives</span>
           </h1>
-          <p className="mx-auto max-w-2xl text-lg text-gray-600">
+          <p className="mx-auto max-w-2xl text-lg text-text-secondary">
             Discover and compare open-source AI agents in the OpenClaw ecosystem.
             Find the perfect agent for your needs.
           </p>
         </div>
 
         {/* Search Bar */}
-        <div className="mx-auto mb-8 max-w-xl">
+        <div className="mx-auto mb-10 max-w-xl animate-slide-up" style={{ animationDelay: '100ms' }}>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+            <Search
+              size={20}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted"
+            />
             <input
               type="text"
               placeholder="Search alternatives..."
               value={filters.search}
               onChange={(e) => handleFilterChange({ search: e.target.value })}
-              className="w-full rounded-lg border border-gray-200 py-3 pl-10 pr-4 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="input w-full py-4 pl-12 pr-4 text-base"
             />
           </div>
         </div>
@@ -114,40 +118,50 @@ export default function Home() {
           />
 
           <div className="flex-1">
-            <div className="mb-4 flex items-center justify-between">
-              <p className="text-sm text-gray-600">
-                {loading ? 'Loading...' : `Showing ${alternatives.length} alternatives`}
+            <div className="mb-6 flex items-center justify-between">
+              <p className="text-sm text-text-secondary">
+                {loading ? (
+                  <span className="text-text-muted">Loading...</span>
+                ) : (
+                  <>
+                    Showing <span className="text-text-primary font-medium">{alternatives.length}</span> alternatives
+                  </>
+                )}
               </p>
-              <select
-                value={filters.sortBy}
-                onChange={(e) => handleFilterChange({ sortBy: e.target.value })}
-                className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              >
-                <option value="name">Sort by Name</option>
-                <option value="stars">Sort by Stars</option>
-                <option value="newest">Sort by Newest</option>
-              </select>
+              <div className="flex items-center gap-2">
+                <ArrowUpDown size={18} className="text-text-muted" />
+                <select
+                  value={filters.sortBy}
+                  onChange={(e) => handleFilterChange({ sortBy: e.target.value })}
+                  className="input py-2 px-3 text-sm"
+                >
+                  <option value="name">Name</option>
+                  <option value="stars">Stars</option>
+                  <option value="newest">Newest</option>
+                </select>
+              </div>
             </div>
 
             {loading ? (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 stagger-children">
                 {[...Array(6)].map((_, i) => (
-                  <div key={i} className="h-48 animate-pulse rounded-xl bg-gray-200" />
+                  <div key={i} className="h-52 skeleton rounded-xl" />
                 ))}
               </div>
             ) : alternatives.length > 0 ? (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 stagger-children">
                 {alternatives.map((alt) => (
                   <AlternativeCard key={alt.id} alternative={alt} />
                 ))}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white py-16 text-center">
-                <p className="text-lg font-medium text-gray-900">No alternatives found</p>
-                <p className="mt-1 text-gray-500">Try adjusting your filters or search query</p>
+              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-bg-surface py-16 text-center">
+                <Frown size={48} className="text-text-muted mb-4" />
+                <p className="text-lg font-medium text-text-primary">No alternatives found</p>
+                <p className="mt-1 text-text-secondary">Try adjusting your filters or search query</p>
                 <button
                   onClick={handleClearFilters}
-                  className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                  className="btn-primary mt-6"
                 >
                   Clear filters
                 </button>
@@ -157,8 +171,9 @@ export default function Home() {
         </div>
       </main>
 
-      <footer className="mt-16 border-t border-gray-200 bg-white py-8">
-        <div className="mx-auto max-w-7xl px-4 text-center text-sm text-gray-500 sm:px-6 lg:px-8">
+      {/* Footer */}
+      <footer className="border-t border-border-subtle py-8">
+        <div className="mx-auto max-w-7xl px-4 text-center text-sm text-text-muted sm:px-6 lg:px-8">
           <p>&copy; {new Date().getFullYear()} Claw Dealership. OpenClaw Alternatives Directory.</p>
         </div>
       </footer>

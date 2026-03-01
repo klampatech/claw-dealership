@@ -1,5 +1,6 @@
 'use client';
 
+import { Funnel, X } from 'lucide-react';
 import { FilterState } from '@/types';
 
 interface FilterSidebarProps {
@@ -18,7 +19,7 @@ const categories = [
 ];
 
 const securityLevels = [
-  { value: 'all', label: 'All Security Levels' },
+  { value: 'all', label: 'All Security' },
   { value: 'sandboxed', label: 'Sandboxed' },
   { value: 'workspace-isolation', label: 'Workspace Isolation' },
   { value: 'minimal-permissions', label: 'Minimal Permissions' },
@@ -54,38 +55,73 @@ const useCases = [
   { value: 'research', label: 'Research' },
 ];
 
+const languages = [
+  { value: 'all', label: 'All Languages' },
+  { value: 'Python', label: 'Python' },
+  { value: 'Rust', label: 'Rust' },
+  { value: 'TypeScript', label: 'TypeScript' },
+  { value: 'Go', label: 'Go' },
+  { value: 'C', label: 'C' },
+  { value: 'Zig', label: 'Zig' },
+];
+
 export default function FilterSidebar({ filters, onFilterChange, onClearFilters }: FilterSidebarProps) {
   const hasFilters =
     filters.category !== 'all' ||
     filters.security !== 'all' ||
     filters.deployment !== 'all' ||
     filters.hardware !== 'all' ||
-    filters.useCase !== 'all';
+    filters.useCase !== 'all' ||
+    filters.language !== 'all';
 
   return (
     <aside className="w-full lg:w-64 shrink-0">
-      <div className="rounded-lg border border-gray-200 bg-white p-4">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold text-gray-900">Filters</h2>
+      <div className="sticky top-24 rounded-xl border border-border-subtle bg-bg-surface p-5">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <Funnel size={18} className="text-accent-primary" />
+            <h2 className="font-semibold text-text-primary font-heading text-sm">Filters</h2>
+          </div>
           {hasFilters && (
             <button
               onClick={onClearFilters}
-              className="text-sm text-blue-600 hover:text-blue-700"
+              className="text-xs text-text-muted hover:text-accent-primary transition-colors flex items-center gap-1"
             >
-              Clear all
+              <X size={14} />
+              Clear
             </button>
           )}
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-5">
+          {/* Language */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-xs font-medium text-text-muted uppercase tracking-wider mb-2">
+              Language
+            </label>
+            <select
+              value={filters.language}
+              onChange={(e) => onFilterChange({ language: e.target.value })}
+              className="input w-full text-sm py-2.5"
+            >
+              {languages.map((lang) => (
+                <option key={lang.value} value={lang.value}>
+                  {lang.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Category */}
+          <div>
+            <label className="block text-xs font-medium text-text-muted uppercase tracking-wider mb-2">
               Category
             </label>
             <select
               value={filters.category}
               onChange={(e) => onFilterChange({ category: e.target.value })}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="input w-full text-sm py-2.5"
             >
               {categories.map((cat) => (
                 <option key={cat.value} value={cat.value}>
@@ -95,33 +131,15 @@ export default function FilterSidebar({ filters, onFilterChange, onClearFilters 
             </select>
           </div>
 
+          {/* Security */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Language
-            </label>
-            <select
-              value={filters.language || 'all'}
-              onChange={(e) => onFilterChange({ language: e.target.value })}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-            >
-              <option value="all">All Languages</option>
-              <option value="Python">Python</option>
-              <option value="Rust">Rust</option>
-              <option value="TypeScript">TypeScript</option>
-              <option value="Go">Go</option>
-              <option value="C">C</option>
-              <option value="Zig">Zig</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-xs font-medium text-text-muted uppercase tracking-wider mb-2">
               Security
             </label>
             <select
               value={filters.security}
               onChange={(e) => onFilterChange({ security: e.target.value })}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="input w-full text-sm py-2.5"
             >
               {securityLevels.map((sec) => (
                 <option key={sec.value} value={sec.value}>
@@ -131,14 +149,15 @@ export default function FilterSidebar({ filters, onFilterChange, onClearFilters 
             </select>
           </div>
 
+          {/* Deployment */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-xs font-medium text-text-muted uppercase tracking-wider mb-2">
               Deployment
             </label>
             <select
               value={filters.deployment}
               onChange={(e) => onFilterChange({ deployment: e.target.value })}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="input w-full text-sm py-2.5"
             >
               {deployments.map((dep) => (
                 <option key={dep.value} value={dep.value}>
@@ -148,14 +167,15 @@ export default function FilterSidebar({ filters, onFilterChange, onClearFilters 
             </select>
           </div>
 
+          {/* Hardware */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-xs font-medium text-text-muted uppercase tracking-wider mb-2">
               Hardware
             </label>
             <select
               value={filters.hardware}
               onChange={(e) => onFilterChange({ hardware: e.target.value })}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="input w-full text-sm py-2.5"
             >
               {hardware.map((hw) => (
                 <option key={hw.value} value={hw.value}>
@@ -165,14 +185,15 @@ export default function FilterSidebar({ filters, onFilterChange, onClearFilters 
             </select>
           </div>
 
+          {/* Use Case */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-xs font-medium text-text-muted uppercase tracking-wider mb-2">
               Use Case
             </label>
             <select
               value={filters.useCase}
               onChange={(e) => onFilterChange({ useCase: e.target.value })}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="input w-full text-sm py-2.5"
             >
               {useCases.map((uc) => (
                 <option key={uc.value} value={uc.value}>
