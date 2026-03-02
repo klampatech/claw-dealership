@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Star, ArrowRight } from 'phosphor-react';
+import { Star, ArrowRight, Download } from 'phosphor-react';
 import { Alternative } from '@/types';
 
 interface AlternativeCardProps {
@@ -36,19 +36,34 @@ export default function AlternativeCard({ alternative }: AlternativeCardProps) {
               </p>
             </div>
 
-            {alternative.stars != null && (
-              <div className="flex items-center gap-1.5 ml-3 shrink-0">
-                <Star
-                  size={16}
-                  className="text-accent-secondary"
-                />
-                <span className="text-sm font-medium text-text-secondary">
-                  {alternative.stars >= 1000
-                    ? `${(alternative.stars / 1000).toFixed(1)}k`
-                    : alternative.stars.toLocaleString()}
-                </span>
-              </div>
-            )}
+            <div className="flex items-center gap-3 ml-3 shrink-0">
+              {alternative.stars != null && (
+                <div className="flex items-center gap-1.5">
+                  <Star
+                    size={16}
+                    className="text-accent-secondary"
+                  />
+                  <span className="text-sm font-medium text-text-secondary">
+                    {alternative.stars >= 1000
+                      ? `${(alternative.stars / 1000).toFixed(1)}k`
+                      : alternative.stars.toLocaleString()}
+                  </span>
+                </div>
+              )}
+              {alternative.downloads != null && (
+                <div className="flex items-center gap-1.5">
+                  <Download
+                    size={16}
+                    className="text-blue-400"
+                  />
+                  <span className="text-sm font-medium text-text-secondary">
+                    {alternative.downloads >= 1000
+                      ? `${(alternative.downloads / 1000).toFixed(1)}k`
+                      : alternative.downloads.toLocaleString()}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Tags */}

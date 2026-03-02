@@ -6,6 +6,7 @@ export interface Alternative {
   fullDescription?: string;
   githubUrl: string;
   stars?: number;
+  downloads?: number;
   language: string;
   category: Category;
   security: SecurityLevel;
