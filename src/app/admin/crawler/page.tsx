@@ -376,15 +376,25 @@ export default function CrawlerAdminPage() {
                             </span>
                           </td>
                           <td className="whitespace-nowrap px-6 py-4">
-                            <a
-                              href={source.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-sm text-text-muted hover:text-accent-primary transition-colors"
-                            >
-                              {new URL(source.url).hostname}
-                              <ExternalLink size={12} />
-                            </a>
+                            {source.type === 'rss' || source.type === 'api' ? (
+                              <a
+                                href={source.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-sm text-text-muted hover:text-accent-primary transition-colors"
+                              >
+                                {(() => {
+                                  try {
+                                    return new URL(source.url).hostname;
+                                  } catch {
+                                    return source.url;
+                                  }
+                                })()}
+                                <ExternalLink size={12} />
+                              </a>
+                            ) : (
+                              <span className="text-sm text-text-muted">r/{source.url}</span>
+                            )}
                           </td>
                           <td className="whitespace-nowrap px-6 py-4 text-sm text-text-muted">
                             {source.lastChecked

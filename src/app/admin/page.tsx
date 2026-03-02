@@ -290,15 +290,25 @@ export default function AdminPage() {
                           <div className="flex items-center gap-2 text-sm text-text-muted">
                             <span className="capitalize">{source.type}</span>
                             <span>•</span>
-                            <a
-                              href={source.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-1 hover:text-accent-primary transition-colors"
-                            >
-                              {new URL(source.url).hostname}
-                              <ExternalLink size={12} />
-                            </a>
+                            {source.type === 'rss' || source.type === 'api' ? (
+                              <a
+                                href={source.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 hover:text-accent-primary transition-colors"
+                              >
+                                {(() => {
+                                  try {
+                                    return new URL(source.url).hostname;
+                                  } catch {
+                                    return source.url;
+                                  }
+                                })()}
+                                <ExternalLink size={12} />
+                              </a>
+                            ) : (
+                              <span className="text-text-muted">r/{source.url}</span>
+                            )}
                           </div>
                         </div>
                       </div>

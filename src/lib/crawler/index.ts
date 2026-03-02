@@ -1,6 +1,6 @@
-import { fetchAllFeeds, RSSItem, filterAIItems } from './rss';
-import { fetchAllReddit, RedditPost, filterAlternativePosts } from './reddit';
-import { createAlternative } from '../db';
+import { fetchFeed, filterAIItems, RSSItem } from './rss';
+import { fetchSubreddit, filterAlternativePosts, RedditPost } from './reddit';
+import { createAlternative, getCrawlerSources, updateCrawlerSourceLastChecked, createCrawlHistory, updateCrawlHistory } from '../db';
 
 export interface CrawlerResult {
   source: string;
@@ -252,25 +252,26 @@ function parseRedditPostToAlternative(
 }
 
 /**
- * Runs the full crawler and adds new alternatives to the database
+ * Processes RSS items from a source
  */
-export async function runCrawler(): Promise<CrawlerSummary> {
-  console.log('Starting crawler...');
+async function processRSSSource(
+  sourceId: string,
+  sourceName: string,
+  sourceUrl: string
+): Promise<CrawlerResult> {
+  const errors: string[] = [];
+  let itemsFound = 0;
+  let itemsAdded = 0;
+  let duplicatesSkipped = 0;
 
-  const results: CrawlerResult[] = [];
-  let totalItemsFound = 0;
-  let totalItemsAdded = 0;
-  let totalDuplicatesSkipped = 0;
+  // Create crawl history entry
+  const historyId = createCrawlHistory({
+    sourceId,
+    status: 'running',
+  });
 
-  // Fetch RSS feeds
-  console.log('Fetching RSS feeds...');
-  const rssResults = await fetchAllFeeds();
-
-  for (const rssResult of rssResults) {
-    const errors: string[] = [];
-    let itemsFound = 0;
-    let itemsAdded = 0;
-    let duplicatesSkipped = 0;
+  try {
+    const rssResult = await fetchFeed(sourceUrl, sourceName);
 
     if (rssResult.error) {
       errors.push(rssResult.error);
@@ -319,29 +320,52 @@ export async function runCrawler(): Promise<CrawlerSummary> {
         }
       }
     }
-
-    results.push({
-      source: rssResult.source,
-      itemsFound,
-      itemsAdded,
-      duplicatesSkipped,
-      errors,
-    });
-
-    totalItemsFound += itemsFound;
-    totalItemsAdded += itemsAdded;
-    totalDuplicatesSkipped += duplicatesSkipped;
+  } catch (error) {
+    errors.push(
+      `Failed to fetch RSS: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
   }
 
-  // Fetch Reddit posts
-  console.log('Fetching Reddit posts...');
-  const redditResults = await fetchAllReddit();
+  // Update crawl history and last_checked timestamp
+  updateCrawlHistory(historyId, {
+    status: errors.length > 0 ? 'failed' : 'completed',
+    itemsFound,
+    itemsAdded,
+    errors: errors.length > 0 ? errors.join('; ') : undefined,
+  });
+  updateCrawlerSourceLastChecked(sourceId);
 
-  for (const redditResult of redditResults) {
-    const errors: string[] = [];
-    let itemsFound = 0;
-    let itemsAdded = 0;
-    let duplicatesSkipped = 0;
+  return {
+    source: sourceName,
+    itemsFound,
+    itemsAdded,
+    duplicatesSkipped,
+    errors,
+  };
+}
+
+/**
+ * Processes subreddit items from a source
+ */
+async function processSubredditSource(
+  sourceId: string,
+  sourceName: string,
+  sourceUrl: string
+): Promise<CrawlerResult> {
+  const errors: string[] = [];
+  let itemsFound = 0;
+  let itemsAdded = 0;
+  let duplicatesSkipped = 0;
+
+  // Create crawl history entry
+  const historyId = createCrawlHistory({
+    sourceId,
+    status: 'running',
+  });
+
+  try {
+    // sourceUrl contains the subreddit name (e.g., "ArtificialIntelligence")
+    const redditResult = await fetchSubreddit(sourceUrl);
 
     if (redditResult.error) {
       errors.push(redditResult.error);
@@ -390,18 +414,205 @@ export async function runCrawler(): Promise<CrawlerSummary> {
         }
       }
     }
+  } catch (error) {
+    errors.push(
+      `Failed to fetch subreddit: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
+  }
 
-    results.push({
-      source: redditResult.source,
-      itemsFound,
-      itemsAdded,
-      duplicatesSkipped,
-      errors,
+  // Update crawl history and last_checked timestamp
+  updateCrawlHistory(historyId, {
+    status: errors.length > 0 ? 'failed' : 'completed',
+    itemsFound,
+    itemsAdded,
+    errors: errors.length > 0 ? errors.join('; ') : undefined,
+  });
+  updateCrawlerSourceLastChecked(sourceId);
+
+  return {
+    source: sourceName,
+    itemsFound,
+    itemsAdded,
+    duplicatesSkipped,
+    errors,
+  };
+}
+
+/**
+ * Processes API source (generic HTTP endpoint)
+ */
+async function processAPISource(
+  sourceId: string,
+  sourceName: string,
+  sourceUrl: string
+): Promise<CrawlerResult> {
+  const errors: string[] = [];
+  let itemsFound = 0;
+  let itemsAdded = 0;
+  let duplicatesSkipped = 0;
+
+  // Create crawl history entry
+  const historyId = createCrawlHistory({
+    sourceId,
+    status: 'running',
+  });
+
+  try {
+    const response = await fetch(sourceUrl, {
+      headers: {
+        'User-Agent': 'ClawDealership/1.0',
+      },
     });
 
-    totalItemsFound += itemsFound;
-    totalItemsAdded += itemsAdded;
-    totalDuplicatesSkipped += duplicatesSkipped;
+    if (!response.ok) {
+      throw new Error(`HTTP error: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Try to extract items from common API response formats
+    const items = Array.isArray(data)
+      ? data
+      : data.items || data.results || data.data || [];
+
+    for (const item of items) {
+      // Extract URL and title/description from the item
+      const url = item.url || item.link || item.html_url || '';
+      const title = item.title || item.name || '';
+      const description = item.description || item.body || item.content || '';
+
+      if (!url || !title) continue;
+
+      if (!isNewUrl(url)) {
+        duplicatesSkipped++;
+        continue;
+      }
+
+      const relevance = analyzeProjectRelevance(title, description, url);
+      if (!relevance.isValid) {
+        continue;
+      }
+
+      // Try to extract GitHub URL
+      const githubMatch = url.match(/github\.com\/([^\/]+)\/([^\/\s]+)/i);
+      if (!githubMatch) continue;
+
+      const repoName = githubMatch[2];
+
+      try {
+        createAlternative({
+          name: repoName.charAt(0).toUpperCase() + repoName.slice(1),
+          description: description.slice(0, 200),
+          githubUrl: `https://github.com/${githubMatch[1]}/${githubMatch[2]}`,
+          language: 'English',
+          category: 'LLM',
+          security: 'Open Source',
+          deployment: ['Cloud', 'Self-hosted'],
+          hardware: ['CPU', 'GPU'],
+          useCases: ['General'],
+          features: ['API'],
+          submittedBy: 'crawler',
+          status: 'approved',
+        });
+        itemsAdded++;
+        itemsFound++;
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          error.message.includes('UNIQUE constraint')
+        ) {
+          duplicatesSkipped++;
+        } else {
+          errors.push(
+            `Failed to add ${repoName}: ${
+              error instanceof Error ? error.message : 'Unknown error'
+            }`
+          );
+        }
+      }
+    }
+  } catch (error) {
+    errors.push(
+      `Failed to fetch API: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
+  }
+
+  // Update crawl history and last_checked timestamp
+  updateCrawlHistory(historyId, {
+    status: errors.length > 0 ? 'failed' : 'completed',
+    itemsFound,
+    itemsAdded,
+    errors: errors.length > 0 ? errors.join('; ') : undefined,
+  });
+  updateCrawlerSourceLastChecked(sourceId);
+
+  return {
+    source: sourceName,
+    itemsFound,
+    itemsAdded,
+    duplicatesSkipped,
+    errors,
+  };
+}
+
+/**
+ * Runs the full crawler and adds new alternatives to the database
+ */
+export async function runCrawler(): Promise<CrawlerSummary> {
+  console.log('Starting crawler...');
+
+  const results: CrawlerResult[] = [];
+  let totalItemsFound = 0;
+  let totalItemsAdded = 0;
+  let totalDuplicatesSkipped = 0;
+
+  // Get active sources from database
+  console.log('Fetching sources from database...');
+  const sources = getCrawlerSources(true);
+
+  if (sources.length === 0) {
+    console.log('No active sources configured. Please add sources in /admin/crawler');
+    return {
+      totalSources: 0,
+      totalItemsFound: 0,
+      totalItemsAdded: 0,
+      totalDuplicatesSkipped: 0,
+      results: [],
+    };
+  }
+
+  console.log(`Found ${sources.length} active sources in database`);
+
+  // Process each source based on its type
+  for (const source of sources) {
+    console.log(`Processing source: ${source.name} (${source.type})`);
+
+    let result: CrawlerResult;
+
+    if (source.type === 'rss') {
+      result = await processRSSSource(source.id, source.name, source.url);
+    } else if (source.type === 'subreddit') {
+      result = await processSubredditSource(source.id, source.name, source.url);
+    } else if (source.type === 'api') {
+      result = await processAPISource(source.id, source.name, source.url);
+    } else {
+      result = {
+        source: source.name,
+        itemsFound: 0,
+        itemsAdded: 0,
+        duplicatesSkipped: 0,
+        errors: [`Unknown source type: ${source.type}`],
+      };
+    }
+
+    results.push(result);
+    totalItemsFound += result.itemsFound;
+    totalItemsAdded += result.itemsAdded;
+    totalDuplicatesSkipped += result.duplicatesSkipped;
+
+    console.log(
+      `  Found: ${result.itemsFound}, Added: ${result.itemsAdded}, Duplicates: ${result.duplicatesSkipped}`
+    );
   }
 
   console.log('Crawler complete.');

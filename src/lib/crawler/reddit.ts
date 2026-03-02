@@ -33,7 +33,7 @@ const BASE_URL = 'https://www.reddit.com';
 /**
  * Fetches posts from a subreddit
  */
-async function fetchSubreddit(subreddit: string): Promise<RedditSearchResult> {
+export async function fetchSubreddit(subreddit: string): Promise<RedditSearchResult> {
   try {
     const url = `${BASE_URL}/r/${subreddit}/new.json?limit=25`;
     const response = await fetch(url, {
@@ -72,7 +72,7 @@ async function fetchSubreddit(subreddit: string): Promise<RedditSearchResult> {
 /**
  * Searches Reddit using the search endpoint
  */
-async function searchReddit(term: string): Promise<RedditSearchResult> {
+export async function searchReddit(term: string): Promise<RedditSearchResult> {
   try {
     const encodedTerm = encodeURIComponent(term);
     const url = `${BASE_URL}/search.json?q=${encodedTerm}&sort=new&limit=25`;

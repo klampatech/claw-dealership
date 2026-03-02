@@ -26,7 +26,7 @@ const RSS_FEEDS = [
 /**
  * Fetches and parses an RSS feed
  */
-async function fetchFeed(feedUrl: string, feedName: string): Promise<RSSFeedResult> {
+export async function fetchFeed(feedUrl: string, feedName: string): Promise<RSSFeedResult> {
   try {
     const feed = await parser.parseURL(feedUrl);
 
